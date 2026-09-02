@@ -581,21 +581,6 @@
   </button>
 </nav>
 
-<div class="sheet-backdrop" id="sheetBackdrop"></div>
-<div class="sheet" id="addSheet">
-  <div class="sheet-handle"></div>
-  <div id="sheetChoices">
-    <p class="sheet-title">Добавить блюдо</p>
-    <p class="sheet-sub">Выберите способ — распознаем состав и метод готовки</p>
-    <div id="methodOptions"></div>
-    <button class="sheet-cancel" id="sheetCancel">Отмена</button>
-  </div>
-  <div id="sheetLoading" class="sheet-loading" hidden>
-    <div class="spinner"></div>
-    <p id="sheetLoadingText">Распознаём блюдо…</p>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -629,13 +614,6 @@
     mealsList: document.getElementById('mealsList'),
     topicsGrid: document.getElementById('topicsGrid'),
     addMealBtn: document.getElementById('addMealBtn'),
-    sheetBackdrop: document.getElementById('sheetBackdrop'),
-    addSheet: document.getElementById('addSheet'),
-    sheetChoices: document.getElementById('sheetChoices'),
-    methodOptions: document.getElementById('methodOptions'),
-    sheetCancel: document.getElementById('sheetCancel'),
-    sheetLoading: document.getElementById('sheetLoading'),
-    sheetLoadingText: document.getElementById('sheetLoadingText'),
     toast: document.getElementById('toast')
   };
 
@@ -644,11 +622,6 @@
   var VERDICT_TONE = { positive: 'pos', neutral: 'warn', negative: 'neg' };
   var VERDICT_LABEL = { positive: 'Хорошо', neutral: 'Нейтрально', negative: 'Стоит заметить' };
   var LOAD_TONE = { 1: 'good', 2: 'warn', 3: 'neg' };
-  var METHOD_LOADING_TEXT = {
-    photo: 'Распознаём блюдо по фото…',
-    voice: 'Расшифровываем голосовую заметку…',
-    text: 'Разбираем описание…'
-  };
 
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, function (c) {
@@ -677,18 +650,27 @@
         return res.json();
       })
       .then(function (json) {
+        applyTelegramName(json);
         state.data = json;
         state.activeId = json.family.activeMemberId || (json.family.members[0] && json.family.members[0].id);
         el.loading.hidden = true;
         el.app.hidden = false;
         el.bottomNav.hidden = false;
         renderAll();
-        renderMethodOptions();
-      })
+          })
       .catch(function () {
         el.loading.hidden = true;
         el.error.hidden = false;
       });
+  }
+
+  function applyTelegramName(json) {
+    var user = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    if (!user || !user.id) return;
+    var members = (json.family && json.family.members) || [];
+    members.forEach(function (m) {
+      if (m.tgId === user.id && user.first_name) m.name = user.first_name;
+    });
   }
 
   function renderAll() {
@@ -746,7 +728,7 @@
 
   function renderCalories() {
     var c = currentProfile().calories;
-    var pct = Math.min(100, Math.round((c.consumed / c.goal) * 100));
+    var pct = c.goal ? Math.min(100, Math.round((c.consumed / c.goal) * 100)) : 0;
     el.calNum.innerHTML = c.consumed + ' <small>/ ' + c.goal + ' ккал</small>';
     el.calFill.style.width = pct + '%';
   }
@@ -772,6 +754,10 @@
 
   function renderTopics() {
     var topics = currentProfile().topics || [];
+    if (!topics.length) {
+      el.topicsGrid.innerHTML = '<p style="padding:8px;font-size:13px;color:var(--ink-faint);">Разбор появится, когда наберутся блюда за день.</p>';
+      return;
+    }
     el.topicsGrid.innerHTML = topics.map(function (t) {
       var tone = VERDICT_TONE[t.verdict] || 'warn';
       return '<button class="theme-card" aria-expanded="false" data-topic="' + t.id + '">' +
@@ -791,50 +777,14 @@
     });
   }
 
-  /* ---------- add meal sheet ---------- */
+  /* ---------- add meal ---------- */
 
-  function renderMethodOptions() {
-    var options = (state.data.addMealOptions) || [];
-    el.methodOptions.innerHTML = options.map(function (o) {
-      return '<button class="method-option" data-method="' + o.id + '">' +
-        '<span class="method-icon">' + o.icon + '</span>' +
-        '<span><p class="method-title">' + escapeHtml(o.title) + '</p><p class="method-desc">' + escapeHtml(o.description) + '</p></span>' +
-      '</button>';
-    }).join('');
-
-    Array.prototype.forEach.call(el.methodOptions.querySelectorAll('.method-option'), function (btn) {
-      btn.addEventListener('click', function () { addMeal(btn.dataset.method); });
-    });
+  function promptBot() {
+    showToast('Добавляй блюда в чате с ботом — здесь появятся свежие цифры');
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
   }
 
-  function openSheet() {
-    el.sheetChoices.hidden = false;
-    el.sheetLoading.hidden = true;
-    el.sheetBackdrop.classList.add('open');
-    el.addSheet.classList.add('open');
-    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-  }
-
-  function closeSheet() {
-    el.sheetBackdrop.classList.remove('open');
-    el.addSheet.classList.remove('open');
-  }
-
-  function addMeal(method) {
-    el.sheetChoices.hidden = true;
-    el.sheetLoading.hidden = false;
-    el.sheetLoadingText.textContent = METHOD_LOADING_TEXT[method] || 'Обрабатываем…';
-
-    setTimeout(function () {
-      closeSheet();
-      showToast('Добавь блюдо в чате с ботом — здесь появятся свежие цифры');
-      if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
-    }, 700);
-  }
-
-  el.addMealBtn.addEventListener('click', openSheet);
-  el.sheetCancel.addEventListener('click', closeSheet);
-  el.sheetBackdrop.addEventListener('click', closeSheet);
+  el.addMealBtn.addEventListener('click', promptBot);
   el.retryBtn.addEventListener('click', loadData);
 
   Array.prototype.forEach.call(el.bottomNav.querySelectorAll('.nav-item'), function (btn) {
