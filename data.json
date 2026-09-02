@@ -1,7 +1,7 @@
 {
   "meta": {
     "appName": "Гликация",
-    "generatedAt": "2026-09-03T02:00:00+03:00",
+    "generatedAt": "2026-09-03T02:11:55.747046+03:00",
     "today": "2026-09-03"
   },
   "family": {
@@ -26,8 +26,8 @@
   "profiles": {
     "katya": {
       "dayStatus": {
-        "verdict": "Данных пока нет",
-        "comment": "Добавь первое блюдо в чате с ботом — здесь появится оценка дня.",
+        "verdict": "День скорее сбалансированный",
+        "comment": "Готовка щадящая, резких сахарных качелей за день не было.",
         "weeklyDirection": "stable",
         "weeklyComment": ""
       },
@@ -36,11 +36,28 @@
         "goal": 1800,
         "unit": "ккал"
       },
-      "meals": [],
+      "meals": [
+        {
+          "id": "katya-1788390715",
+          "time": "02:11",
+          "name": "гречку с курицей",
+          "emoji": "🍗",
+          "inputMethod": "text",
+          "cookMethod": "варка",
+          "impact": "protective",
+          "note": "Щадящая готовка почти не образует AGEs"
+        }
+      ],
       "topics": [],
       "weeklyTrend": {
         "comment": "",
-        "days": []
+        "days": [
+          {
+            "date": "2026-09-03",
+            "load": 1,
+            "label": "лёгкий день"
+          }
+        ]
       }
     },
     "zhenya": {
