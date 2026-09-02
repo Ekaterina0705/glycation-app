@@ -803,7 +803,7 @@
     }).join('');
 
     Array.prototype.forEach.call(el.methodOptions.querySelectorAll('.method-option'), function (btn) {
-      btn.addEventListener('click', function () { mockAddMeal(btn.dataset.method); });
+      btn.addEventListener('click', function () { addMeal(btn.dataset.method); });
     });
   }
 
@@ -820,36 +820,16 @@
     el.addSheet.classList.remove('open');
   }
 
-  function mockAddMeal(method) {
+  function addMeal(method) {
     el.sheetChoices.hidden = true;
     el.sheetLoading.hidden = false;
     el.sheetLoadingText.textContent = METHOD_LOADING_TEXT[method] || 'Обрабатываем…';
 
     setTimeout(function () {
       closeSheet();
-      var mockMeals = [
-        { emoji: '🥗', name: 'Салат с оливковым маслом и зеленью', cookMethod: 'сырое', impact: 'protective' },
-        { emoji: '🍞', name: 'Бутерброд с белым хлебом', cookMethod: 'без готовки', impact: 'risk' },
-        { emoji: '🍲', name: 'Овощное рагу', cookMethod: 'тушение', impact: 'neutral' }
-      ];
-      var mock = mockMeals[Math.floor(Math.random() * mockMeals.length)];
-      var now = new Date();
-      var time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-      var profile = currentProfile();
-      profile.meals.unshift({
-        id: 'mock-' + Date.now(),
-        time: time,
-        name: mock.name,
-        emoji: mock.emoji,
-        inputMethod: method,
-        cookMethod: mock.cookMethod,
-        impact: mock.impact,
-        note: 'Демо-режим: блюдо распознано автоматически'
-      });
-      renderMeals();
-      showToast('Блюдо добавлено — демо-режим прототипа');
-      if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-    }, 1200);
+      showToast('Добавь блюдо в чате с ботом — здесь появятся свежие цифры');
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+    }, 700);
   }
 
   el.addMealBtn.addEventListener('click', openSheet);
