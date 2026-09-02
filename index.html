@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Гликация</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --cream: #E6E3CF;
+    --cream-2: #D4DABD;
+    --sage-100: #C7D6B3;
+    --sage-300: #93B27E;
+    --sage-500: #4F7B4B;
+    --forest-700: #2C4629;
+    --forest-900: #15220F;
+
+    --ink: #1B2419;
+    --ink-soft: #3E4B3A;
+    --ink-faint: #63705E;
+
+    --glass: rgba(255,255,255,0.30);
+    --glass-strong: rgba(255,255,255,0.44);
+
+    --accent: #3E6B3A;
+    --accent-ink: #F6F8F1;
+
+    --pos-bg: #DCEBD0; --pos-text: #2E5A28;
+    --warn-bg: #F2E2C4; --warn-text: #875D20;
+    --neg-bg: #F3DCCB; --neg-text: #8C4A2E;
+
+    --shadow-1: rgba(29,44,27,0.16);
+    --shadow-2: rgba(29,44,27,0.28);
+
+    --sheen: linear-gradient(128deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0) 32%, rgba(255,255,255,0) 64%, rgba(255,255,255,0.14) 100%);
+
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100dvh;
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse 90% 40% at 20% 0%, rgba(150,178,128,0.85), transparent 60%),
+      radial-gradient(ellipse 70% 38% at 100% 22%, rgba(70,110,66,0.55), transparent 55%),
+      radial-gradient(ellipse 80% 50% at 8% 100%, rgba(94,130,88,0.55), transparent 60%),
+      linear-gradient(180deg, var(--cream) 0%, var(--cream-2) 100%);
+    background-attachment: fixed;
+  }
+
+  .noise {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.45;
+    mix-blend-mode: multiply;
+    z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .screen-blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .sb1 { width: 260px; height: 260px; background: rgba(70,110,66,0.45); top: -60px; right: -70px; }
+  .sb2 { width: 220px; height: 220px; background: rgba(147,178,126,0.5); bottom: 80px; left: -70px; }
+
+  #app {
+    position: relative;
+    z-index: 1;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 16px 16px calc(108px + env(safe-area-inset-bottom));
+    min-height: 100dvh;
+  }
+
+  /* ---------- header ---------- */
+  .greet {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 2px 18px;
+    gap: 12px;
+  }
+  .eyebrow {
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 600;
+    margin: 0 0 3px;
+  }
+  .greet-text h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 22px;
+    color: var(--forest-900);
+    text-wrap: balance;
+    line-height: 1.2;
+  }
+
+  .avatars { display: flex; gap: 8px; flex-shrink: 0; }
+  .avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.95), var(--glass-strong) 55%, rgba(255,255,255,0.35) 100%);
+    color: var(--forest-700);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow:
+      inset 0 1px 1px rgba(255,255,255,0.9),
+      inset 0 -3px 4px -2px rgba(29,44,27,0.15),
+      0 4px 10px -4px var(--shadow-1);
+    transition: transform .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .avatar[aria-pressed="true"] { border-color: var(--accent); background: var(--sage-100); }
+  .avatar:active { transform: scale(0.94); }
+
+  /* ---------- generic glass card ---------- */
+  .card {
+    position: relative;
+    background: var(--sheen), var(--glass);
+    -webkit-backdrop-filter: blur(34px) saturate(1.5);
+    backdrop-filter: blur(34px) saturate(1.5);
+    border-radius: 26px;
+    box-shadow:
+      inset 0 0 32px rgba(255,255,255,0.16),
+      inset 0 -20px 26px -22px rgba(255,255,255,0.3),
+      0 26px 46px -20px var(--shadow-2),
+      0 10px 18px -10px rgba(110,148,104,0.4);
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+
+  .hero-card h2 {
+    margin: 6px 0 8px;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 23px;
+    color: var(--forest-900);
+    text-wrap: balance;
+    line-height: 1.28;
+  }
+  .hero-card p {
+    margin: 0 0 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  .week-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .week-dot {
+    flex: 1;
+    height: 8px;
+    border-radius: 5px;
+    background: var(--sage-300);
+  }
+  .week-dot.warn { background: var(--warn-text); opacity: .55; }
+  .week-dot.good { background: var(--accent); opacity: .55; }
+  .week-dot.neg { background: var(--neg-text); opacity: .55; }
+  .week-dot.today { opacity: 1; box-shadow: 0 0 0 2px var(--glass-strong), 0 0 0 3px var(--accent); }
+  .weekly-comment {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- calories ---------- */
+  .cal-card { display: flex; flex-direction: column; gap: 10px; padding: 16px 20px; }
+  .cal-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .cal-top .eyebrow { margin: 0; }
+  .cal-num { font-weight: 800; font-size: 15px; color: var(--forest-900); font-variant-numeric: tabular-nums; }
+  .cal-num small { font-weight: 600; color: var(--ink-faint); }
+  .bar { height: 8px; border-radius: 5px; background: rgba(78,101,70,0.15); overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--sage-500), var(--accent)); border-radius: 5px; transition: width .4s ease; }
+
+  /* ---------- add button ---------- */
+  .add-btn {
+    width: 100%;
+    border: none;
+    border-radius: 20px;
+    background: linear-gradient(165deg, rgba(255,255,255,0.4), rgba(255,255,255,0) 40%), linear-gradient(180deg, #4C7C47, var(--accent) 65%);
+    color: var(--accent-ink);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 15px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow:
+      inset 0 1.5px 0 rgba(255,255,255,0.55),
+      inset 0 -10px 16px -12px rgba(0,0,0,0.35),
+      0 14px 26px -10px rgba(62,107,58,0.6);
+    transition: transform .12s ease, box-shadow .12s ease;
+    margin-bottom: 20px;
+  }
+  .add-btn:active { transform: translateY(0) scale(0.98); box-shadow: 0 4px 10px -4px rgba(62,107,58,0.55); }
+
+  /* ---------- section titles ---------- */
+  .section-title {
+    font-size: 12.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin: 4px 2px 10px;
+  }
+
+  /* ---------- meals list ---------- */
+  .meals { padding: 6px; }
+  .meal-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 8px;
+  }
+  .meal-row + .meal-row { border-top: 1px solid rgba(78,101,70,0.12); }
+  .meal-emoji {
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    background: radial-gradient(circle at 30% 26%, rgba(255,255,255,0.95), var(--glass-strong) 60%, rgba(255,255,255,0.3) 100%);
+    box-shadow:
+      inset 0 1px 1px rgba(255,255,255,0.9),
+      inset 0 -3px 5px -2px rgba(29,44,27,0.16),
+      0 4px 10px -4px var(--shadow-1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .meal-mid { flex: 1; min-width: 0; }
+  .meal-title { font-size: 13.5px; font-weight: 700; color: var(--forest-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meal-meta { font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+
+  /* ---------- pills (shared: meal impact + topic verdict) ---------- */
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 100px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .pill.pos { background: var(--pos-bg); color: var(--pos-text); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn-text); }
+  .pill.neg { background: var(--neg-bg); color: var(--neg-text); }
+
+  /* ---------- topic cards (collapsed by default) ---------- */
+  .themes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .theme-card {
+    text-align: left;
+    width: 100%;
+    font-family: var(--font-body);
+    background: var(--sheen), var(--glass);
+    border: none;
+    border-radius: 20px;
+    padding: 14px;
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(30px) saturate(1.5);
+    backdrop-filter: blur(30px) saturate(1.5);
+    box-shadow:
+      inset 0 0 26px rgba(255,255,255,0.14),
+      0 18px 30px -18px var(--shadow-2),
+      0 8px 14px -8px rgba(110,148,104,0.35);
+    transition: transform .18s ease;
+  }
+  .theme-card:active { transform: translateY(1px); }
+  .theme-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+  .theme-emoji { font-size: 19px; }
+  .theme-chevron { color: var(--ink-faint); font-size: 12px; transition: transform .18s ease; }
+  .theme-card[aria-expanded="true"] .theme-chevron { transform: rotate(180deg); }
+  .theme-title { font-size: 13px; font-weight: 700; color: var(--forest-900); margin-bottom: 6px; }
+  .theme-explain {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .22s ease;
+  }
+  .theme-card[aria-expanded="true"] .theme-explain { grid-template-rows: 1fr; }
+  .theme-explain-inner { overflow: hidden; }
+  .theme-explain p {
+    margin: 9px 0 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- bottom nav ---------- */
+  .bottom-nav {
+    position: fixed;
+    left: 14px; right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    max-width: 532px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 6px;
+    border-radius: 22px;
+    background: var(--sheen), var(--glass-strong);
+    -webkit-backdrop-filter: blur(26px) saturate(1.3);
+    backdrop-filter: blur(26px) saturate(1.3);
+    box-shadow: 0 14px 28px -12px var(--shadow-2);
+    z-index: 20;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10.5px; font-weight: 700;
+    color: var(--ink-faint);
+    background: none; border: none; cursor: pointer;
+    padding: 4px 14px;
+    font-family: var(--font-body);
+  }
+  .nav-item.active { color: var(--forest-900); }
+  .nav-item svg { width: 19px; height: 19px; }
+
+  /* ---------- sheet / modal ---------- */
+  .sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(21,34,15,0.42);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+    z-index: 40;
+  }
+  .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--sheen), var(--glass-strong);
+    -webkit-backdrop-filter: blur(40px) saturate(1.5);
+    backdrop-filter: blur(40px) saturate(1.5);
+    border-radius: 26px 26px 0 0;
+    padding: 10px 18px calc(22px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform .25s cubic-bezier(.32,.72,0,1);
+    z-index: 41;
+    box-shadow: 0 -20px 46px -20px var(--shadow-2);
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet-handle {
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(29,44,27,0.2);
+    margin: 6px auto 14px;
+  }
+  .sheet-title {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 19px;
+    color: var(--forest-900);
+    margin: 0 0 4px;
+  }
+  .sheet-sub {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 16px;
+  }
+  .method-option {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    width: 100%;
+    text-align: left;
+    padding: 13px 14px;
+    border-radius: 16px;
+    border: none;
+    background: var(--glass);
+    margin-bottom: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .method-option:active { transform: scale(0.98); }
+  .method-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: radial-gradient(circle at 30% 26%, rgba(255,255,255,0.95), var(--glass-strong) 60%, rgba(255,255,255,0.3) 100%);
+    box-shadow:
+      inset 0 1px 1px rgba(255,255,255,0.9),
+      inset 0 -3px 5px -2px rgba(29,44,27,0.16),
+      0 4px 10px -4px var(--shadow-1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 19px;
+    flex-shrink: 0;
+  }
+  .method-title { font-size: 14.5px; font-weight: 700; margin: 0 0 2px; color: var(--forest-900); }
+  .method-desc { font-size: 12.5px; color: var(--ink-faint); margin: 0; }
+  .sheet-cancel {
+    width: 100%;
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px;
+    cursor: pointer;
+    font-family: var(--font-body);
+  }
+
+  .sheet-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 0 10px;
+    gap: 12px;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 3px solid rgba(29,44,27,0.15);
+    border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .sheet-loading p { font-size: 13.5px; color: var(--ink-soft); margin: 0; }
+
+  /* ---------- toast ---------- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 20px);
+    background: linear-gradient(180deg, #4C7C47, var(--accent) 65%);
+    color: var(--accent-ink);
+    padding: 12px 18px;
+    border-radius: 999px;
+    font-size: 13.5px;
+    font-weight: 700;
+    box-shadow: 0 14px 26px -10px rgba(62,107,58,0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 50;
+    max-width: 90%;
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- fallback / loading ---------- */
+  .state-screen {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 100px 24px;
+    gap: 10px;
+    min-height: 100dvh;
+  }
+  .state-screen .emoji { font-size: 40px; }
+  .state-screen h2 { font-family: var(--font-display); font-weight: 500; font-size: 19px; margin: 0; color: var(--forest-900); }
+  .state-screen p { font-size: 13.5px; color: var(--ink-soft); margin: 0; max-width: 280px; line-height: 1.5; }
+  .retry-btn {
+    margin-top: 8px;
+    border: none;
+    background: linear-gradient(180deg, #4C7C47, var(--accent) 65%);
+    color: var(--accent-ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 11px 22px;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 14px 26px -10px rgba(62,107,58,0.6);
+  }
+
+  button:focus-visible, .avatar:focus-visible { outline: 2px solid var(--forest-700); outline-offset: 2px; }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="noise"></div>
+<div class="screen-blob sb1"></div>
+<div class="screen-blob sb2"></div>
+
+<div id="loadingState" class="state-screen">
+  <div class="emoji">🍃</div>
+  <h2>Собираем картину дня…</h2>
+  <p>Смотрим, что успело отложиться, а что защитило.</p>
+</div>
+
+<div id="errorState" class="state-screen" hidden>
+  <div class="emoji">🌾</div>
+  <h2>Не получилось загрузить данные</h2>
+  <p>Похоже, файл с данными сейчас недоступен. Проверьте соединение и попробуйте ещё раз.</p>
+  <button class="retry-btn" id="retryBtn">Повторить</button>
+</div>
+
+<div id="app" hidden>
+
+  <header class="greet">
+    <div class="greet-text">
+      <p class="eyebrow">Домашний рацион</p>
+      <h1 id="greeting">Привет</h1>
+    </div>
+    <div class="avatars" id="familySwitcher"></div>
+  </header>
+
+  <section class="card hero-card">
+    <p class="eyebrow">Статус дня</p>
+    <h2 id="statusVerdict"></h2>
+    <p id="statusComment"></p>
+    <div class="week-row" id="trendRow"></div>
+    <p class="weekly-comment" id="weeklyComment"></p>
+  </section>
+
+  <section class="card cal-card">
+    <div class="cal-top">
+      <p class="eyebrow">Калории</p>
+      <div class="cal-num" id="calNum">0 <small>/ 0 ккал</small></div>
+    </div>
+    <div class="bar"><div class="bar-fill" id="calFill" style="width:0%"></div></div>
+  </section>
+
+  <button class="add-btn" id="addMealBtn">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5V14.5M1.5 8H14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Добавить блюдо
+  </button>
+
+  <p class="section-title">Сегодня в тарелке</p>
+  <section class="card meals" id="mealsList"></section>
+
+  <p class="section-title" style="margin-top:18px;">Как это отразилось на теле</p>
+  <div class="themes-grid" id="topicsGrid"></div>
+
+</div>
+
+<nav class="bottom-nav" id="bottomNav" hidden>
+  <button class="nav-item active" data-nav="home">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V19A1 1 0 0 1 19 20H5A1 1 0 0 1 4 19V11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    Главная
+  </button>
+  <button class="nav-item" data-nav="diary">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M5 4H16L19 7V20H5V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 10H15M8 14H15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    Дневник
+  </button>
+  <button class="nav-item" data-nav="profile">
+    <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/><path d="M5 20C5 16.5 8 14.5 12 14.5C16 14.5 19 16.5 19 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    Профиль
+  </button>
+</nav>
+
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+<div class="sheet" id="addSheet">
+  <div class="sheet-handle"></div>
+  <div id="sheetChoices">
+    <p class="sheet-title">Добавить блюдо</p>
+    <p class="sheet-sub">Выберите способ — распознаем состав и метод готовки</p>
+    <div id="methodOptions"></div>
+    <button class="sheet-cancel" id="sheetCancel">Отмена</button>
+  </div>
+  <div id="sheetLoading" class="sheet-loading" hidden>
+    <div class="spinner"></div>
+    <p id="sheetLoadingText">Распознаём блюдо…</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) {
+    try {
+      tg.ready();
+      tg.expand();
+    } catch (e) {}
+  }
+
+  var state = { data: null, activeId: null };
+
+  var el = {
+    loading: document.getElementById('loadingState'),
+    error: document.getElementById('errorState'),
+    app: document.getElementById('app'),
+    bottomNav: document.getElementById('bottomNav'),
+    retryBtn: document.getElementById('retryBtn'),
+    greeting: document.getElementById('greeting'),
+    familySwitcher: document.getElementById('familySwitcher'),
+    statusVerdict: document.getElementById('statusVerdict'),
+    statusComment: document.getElementById('statusComment'),
+    trendRow: document.getElementById('trendRow'),
+    weeklyComment: document.getElementById('weeklyComment'),
+    calNum: document.getElementById('calNum'),
+    calFill: document.getElementById('calFill'),
+    mealsList: document.getElementById('mealsList'),
+    topicsGrid: document.getElementById('topicsGrid'),
+    addMealBtn: document.getElementById('addMealBtn'),
+    sheetBackdrop: document.getElementById('sheetBackdrop'),
+    addSheet: document.getElementById('addSheet'),
+    sheetChoices: document.getElementById('sheetChoices'),
+    methodOptions: document.getElementById('methodOptions'),
+    sheetCancel: document.getElementById('sheetCancel'),
+    sheetLoading: document.getElementById('sheetLoading'),
+    sheetLoadingText: document.getElementById('sheetLoadingText'),
+    toast: document.getElementById('toast')
+  };
+
+  var IMPACT_TONE = { protective: 'pos', neutral: 'warn', risk: 'neg' };
+  var IMPACT_LABEL = { protective: 'защитило', neutral: 'нейтрально', risk: 'нагрузило' };
+  var VERDICT_TONE = { positive: 'pos', neutral: 'warn', negative: 'neg' };
+  var VERDICT_LABEL = { positive: 'Хорошо', neutral: 'Нейтрально', negative: 'Стоит заметить' };
+  var LOAD_TONE = { 1: 'good', 2: 'warn', 3: 'neg' };
+  var METHOD_LOADING_TEXT = {
+    photo: 'Распознаём блюдо по фото…',
+    voice: 'Расшифровываем голосовую заметку…',
+    text: 'Разбираем описание…'
+  };
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function showToast(msg) {
+    el.toast.textContent = msg;
+    el.toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () {
+      el.toast.classList.remove('show');
+    }, 2200);
+  }
+
+  function loadData() {
+    el.loading.hidden = false;
+    el.error.hidden = true;
+    el.app.hidden = true;
+    el.bottomNav.hidden = true;
+
+    fetch('data.json?v=' + Date.now(), { cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        state.data = json;
+        state.activeId = json.family.activeMemberId || (json.family.members[0] && json.family.members[0].id);
+        el.loading.hidden = true;
+        el.app.hidden = false;
+        el.bottomNav.hidden = false;
+        renderAll();
+        renderMethodOptions();
+      })
+      .catch(function () {
+        el.loading.hidden = true;
+        el.error.hidden = false;
+      });
+  }
+
+  function renderAll() {
+    renderFamilySwitcher();
+    renderGreeting();
+    renderDayStatus();
+    renderCalories();
+    renderMeals();
+    renderTopics();
+  }
+
+  function currentProfile() {
+    return state.data.profiles[state.activeId];
+  }
+  function currentMember() {
+    return state.data.family.members.find(function (m) { return m.id === state.activeId; });
+  }
+
+  function renderFamilySwitcher() {
+    var members = state.data.family.members;
+    el.familySwitcher.innerHTML = members.map(function (m) {
+      return '<button class="avatar" data-id="' + m.id + '" aria-pressed="' + (m.id === state.activeId) + '" aria-label="' + escapeHtml(m.name) + '">' + m.avatar + '</button>';
+    }).join('');
+
+    Array.prototype.forEach.call(el.familySwitcher.querySelectorAll('.avatar'), function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.dataset.id === state.activeId) return;
+        state.activeId = btn.dataset.id;
+        if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+        renderAll();
+      });
+    });
+  }
+
+  function renderGreeting() {
+    var m = currentMember();
+    el.greeting.textContent = m ? 'Привет, ' + m.name : 'Привет';
+  }
+
+  function renderDayStatus() {
+    var p = currentProfile();
+    var ds = p.dayStatus;
+    el.statusVerdict.textContent = ds.verdict;
+    el.statusComment.textContent = ds.comment;
+    el.weeklyComment.textContent = ds.weeklyComment || '';
+
+    var days = (p.weeklyTrend && p.weeklyTrend.days) || [];
+    var todayStr = state.data.meta && state.data.meta.today;
+    el.trendRow.innerHTML = days.map(function (d) {
+      var isToday = d.date === todayStr;
+      var tone = LOAD_TONE[d.load] || 'good';
+      return '<div class="week-dot ' + tone + (isToday ? ' today' : '') + '" title="' + escapeHtml(d.label) + '"></div>';
+    }).join('');
+  }
+
+  function renderCalories() {
+    var c = currentProfile().calories;
+    var pct = Math.min(100, Math.round((c.consumed / c.goal) * 100));
+    el.calNum.innerHTML = c.consumed + ' <small>/ ' + c.goal + ' ккал</small>';
+    el.calFill.style.width = pct + '%';
+  }
+
+  function renderMeals() {
+    var meals = currentProfile().meals || [];
+    if (!meals.length) {
+      el.mealsList.innerHTML = '<p style="padding:8px;font-size:13px;color:var(--ink-faint);">Пока пусто — добавьте первое блюдо дня.</p>';
+      return;
+    }
+    el.mealsList.innerHTML = meals.map(function (meal) {
+      var tone = IMPACT_TONE[meal.impact] || 'warn';
+      return '<div class="meal-row">' +
+        '<div class="meal-emoji">' + meal.emoji + '</div>' +
+        '<div class="meal-mid">' +
+          '<div class="meal-title">' + escapeHtml(meal.name) + '</div>' +
+          '<div class="meal-meta">' + meal.time + ' · ' + escapeHtml(meal.cookMethod) + '</div>' +
+        '</div>' +
+        '<span class="pill ' + tone + '">' + IMPACT_LABEL[meal.impact] + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderTopics() {
+    var topics = currentProfile().topics || [];
+    el.topicsGrid.innerHTML = topics.map(function (t) {
+      var tone = VERDICT_TONE[t.verdict] || 'warn';
+      return '<button class="theme-card" aria-expanded="false" data-topic="' + t.id + '">' +
+        '<div class="theme-top"><span class="theme-emoji">' + t.icon + '</span><span class="theme-chevron">▾</span></div>' +
+        '<div class="theme-title">' + escapeHtml(t.title) + '</div>' +
+        '<span class="pill ' + tone + '">' + VERDICT_LABEL[t.verdict] + '</span>' +
+        '<div class="theme-explain"><div class="theme-explain-inner"><p>' + escapeHtml(t.comment) + '</p></div></div>' +
+      '</button>';
+    }).join('');
+
+    Array.prototype.forEach.call(el.topicsGrid.querySelectorAll('.theme-card'), function (card) {
+      card.addEventListener('click', function () {
+        var open = card.getAttribute('aria-expanded') === 'true';
+        card.setAttribute('aria-expanded', String(!open));
+        if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+      });
+    });
+  }
+
+  /* ---------- add meal sheet ---------- */
+
+  function renderMethodOptions() {
+    var options = (state.data.addMealOptions) || [];
+    el.methodOptions.innerHTML = options.map(function (o) {
+      return '<button class="method-option" data-method="' + o.id + '">' +
+        '<span class="method-icon">' + o.icon + '</span>' +
+        '<span><p class="method-title">' + escapeHtml(o.title) + '</p><p class="method-desc">' + escapeHtml(o.description) + '</p></span>' +
+      '</button>';
+    }).join('');
+
+    Array.prototype.forEach.call(el.methodOptions.querySelectorAll('.method-option'), function (btn) {
+      btn.addEventListener('click', function () { mockAddMeal(btn.dataset.method); });
+    });
+  }
+
+  function openSheet() {
+    el.sheetChoices.hidden = false;
+    el.sheetLoading.hidden = true;
+    el.sheetBackdrop.classList.add('open');
+    el.addSheet.classList.add('open');
+    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+  }
+
+  function closeSheet() {
+    el.sheetBackdrop.classList.remove('open');
+    el.addSheet.classList.remove('open');
+  }
+
+  function mockAddMeal(method) {
+    el.sheetChoices.hidden = true;
+    el.sheetLoading.hidden = false;
+    el.sheetLoadingText.textContent = METHOD_LOADING_TEXT[method] || 'Обрабатываем…';
+
+    setTimeout(function () {
+      closeSheet();
+      var mockMeals = [
+        { emoji: '🥗', name: 'Салат с оливковым маслом и зеленью', cookMethod: 'сырое', impact: 'protective' },
+        { emoji: '🍞', name: 'Бутерброд с белым хлебом', cookMethod: 'без готовки', impact: 'risk' },
+        { emoji: '🍲', name: 'Овощное рагу', cookMethod: 'тушение', impact: 'neutral' }
+      ];
+      var mock = mockMeals[Math.floor(Math.random() * mockMeals.length)];
+      var now = new Date();
+      var time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      var profile = currentProfile();
+      profile.meals.unshift({
+        id: 'mock-' + Date.now(),
+        time: time,
+        name: mock.name,
+        emoji: mock.emoji,
+        inputMethod: method,
+        cookMethod: mock.cookMethod,
+        impact: mock.impact,
+        note: 'Демо-режим: блюдо распознано автоматически'
+      });
+      renderMeals();
+      showToast('Блюдо добавлено — демо-режим прототипа');
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    }, 1200);
+  }
+
+  el.addMealBtn.addEventListener('click', openSheet);
+  el.sheetCancel.addEventListener('click', closeSheet);
+  el.sheetBackdrop.addEventListener('click', closeSheet);
+  el.retryBtn.addEventListener('click', loadData);
+
+  Array.prototype.forEach.call(el.bottomNav.querySelectorAll('.nav-item'), function (btn) {
+    btn.addEventListener('click', function () {
+      if (btn.dataset.nav === 'home') return;
+      showToast('Раздел появится в следующей версии прототипа');
+    });
+  });
+
+  loadData();
+})();
+</script>
+</body>
+</html>
