@@ -755,7 +755,7 @@
   function renderTopics() {
     var topics = currentProfile().topics || [];
     if (!topics.length) {
-      el.topicsGrid.innerHTML = '<p style="padding:8px;font-size:13px;color:var(--ink-faint);">Разбор появится, когда наберутся блюда за день.</p>';
+      el.topicsGrid.innerHTML = '<p style="padding:8px;font-size:13px;color:var(--ink-faint);">Разбор появится после первого блюда.</p>';
       return;
     }
     el.topicsGrid.innerHTML = topics.map(function (t) {
